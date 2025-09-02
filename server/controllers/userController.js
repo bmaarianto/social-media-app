@@ -89,3 +89,56 @@ export const updateUserData = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+// Find Users using username, email, location, name
+export const discoverUsers = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const { input } = req.body;
+
+    const allUsers = await User.find({
+      $or: [
+        { username: new RegExp(input, "i") },
+        { email: new RegExp(input, "i") },
+        { fullName: new RegExp(input, "i") },
+        { location: new RegExp(input, "i") },
+      ],
+    });
+    const filteredUsers = allUsers.filter((user) => user._id !== userId);
+    res.json({ success: true, users: filteredUsers });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Follow User
+export const followUser = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const { id } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (user.following.includes(id)) {
+      return res.json({
+        success: false,
+        message: "You are already following this user",
+      });
+    }
+
+    user.following.push(id);
+    await user.save();
+
+    const toUser = await User.findById(id);
+    toUser.followers.push(userId);
+    await toUser.save();
+
+    res.json({ success: true, message: "Now you are following this user" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Unfollow User
